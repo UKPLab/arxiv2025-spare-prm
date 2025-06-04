@@ -1,0 +1,195 @@
+neptune:
+  workspace: <your-workspace>
+  project-name: SPARE-PRM-Training
+  run-name: spare-prm-training
+  tags:
+    - reasoning
+    - LLMs
+    - training
+    - reward-model
+    - token-classification
+
+
+exp:
+  seed: 42
+
+  data:
+    load:
+      path: <path-to-HF-or-local-data> # e.g. "data/math" or "UKPLab/sparp"
+      # name:
+      #   - <name-of-sub-data> # if there are several subcomponents of the data e.g. "small-SpaRP-PS1 (SpaRTUN)" for sparp
+    merge_output:
+      train_output_path: <path-to-step-graded-multiple-model-output-generations-on-train-set>
+      validation_output_path: <path-to-step-graded-multiple-model-output-generations-on-val-set>
+        
+      merge_keys:
+        - instruction
+        # - "context" # for sparp or combined_paragraphs for MuSiQue-Ans or comment for gsm8k and math
+        - question
+      id_keys: 
+        id: "context_id"
+        # context_id: "context_id" # for dataset where multiple ids are there
+        # question_id: "question_id" # for dataset where multiple ids are there
+      ground_truth_as_graded: # provide if gt also to be included only once per instance to ensure at least one correct path per example. May or may not get included as sampling done over orders of magnitude of data.
+        reference_field: "reference_ans"
+        grade_field: "grade_ans"
+        label_field: "grading"
+        outcome_field: "em"
+    # filter:
+    #   fields:
+    #     - context_id
+    #     - question_id
+    #   model_output: "output/<dataset-name>/infer-llama-3-8B-1I-SFT-20-generation-0-shot" # filter and keep only those whose field ids are in model output
+    shuffle: true
+    select: # shuffle_select for choosing based on indices after shuffling, field_stratified_select for shuffled select but trying for same number of selection per field value
+    #   select_fn: "suffle_select"
+    #   select_kwargs:
+    #     start_idx: 0
+    #     end_idx: 5 # end index is excluding like usual python
+      select_fn: "field_stratified_select"
+      select_kwargs:
+        field: "em"
+        stratified_values:
+          - 0
+          - 1
+        select: 
+          train: 20000 # for each stratified value i.e. 20K for outcome label 0 and 20K for outcome label 1
+          validation: 500 # for each stratified value
+    
+    step_tag_args:
+      response_field: "grade_ans"
+      label_field: "grading"
+      outcome_field: "em"
+      reference_field: ""
+      step_tag: " ки\n" # ensure uncommon but single token upon tokenization
+      step_pattern: "\\n*\\[\\d+\\]\\s*" # for musique dataset from grading
+      # step_pattern: "$" # "$" for only at the end of text e.g. outcome step
+      # preprocessor: "regex_substitute"
+      # preprocessor_kwargs: 
+      #   repl: "\\n"
+      #   # pattern: "\\n*\\[\\d+\\]\\s*"
+      #   pattern: " ки\n"
+      #   insert_at_end: false
+      step_tag_inserter: "regex_substitute" # callable or keys supported in STEP_TAG_INSERTER
+      step_targets:
+        INCORRECT: 0
+        CORRECT: 1
+      missed_grading_as_outcome: false # true # grading can be complete or incomplete depending on LLM instruction following capability. Chosing false here just marks the steps that wee missed in grading as incorrect while chosing true here marks the step missed while grading to be same as outcome em.
+    
+    chat_template_args:
+      prepare_splits: 
+        - train
+        - validation
+      keep_fields: "labels"
+      instruct_field: instruction
+
+      system_as_separate: false # true # CHANGE as per model e.g. true for llama but false for mistral
+      system_user_sep: "\n\n"
+      
+      context_field: null # null for gsm8k and math, combined_paragraphs for MuSiQue-Ans, context for sparp
+      question_field: question
+      response_field: "" # already part of generated response
+      response_trigger: "" # already part of generated response
+      reasoning_field: "step_tagged_response" # otherwise "response" if the generated response already contains step tags
+      reasoning_trigger: "" # already part of generated response
+      # ctx_ques_sep: " " # for other datasets e.g. SpaRP
+      # ctx_ques_sep: "\n\nQUESTION: " for MuSiQue-Ans
+
+  model:
+    model_class: HFGenerativeLM
+    init_kwargs:
+      model: "meta-llama/Meta-Llama-3-8B-Instruct"
+      modelclass: "AutoModelForCausalLM" # Since RM was trained as causal LM task with predictions only at step_tags
+      peft_model: # default None, else path to trained peft model for iterative training 
+      tokenizer_kwargs:
+        # right padding to fix unexpected overflow issues with fp16 training as noted in the sft_trainer:
+        # https://github.com/huggingface/trl/blob/main/trl/trainer/sft_trainer.py#L285
+        padding_side: right
+      pad_token: unk_token
+      device_map: ddp # None if quantization is being used
+      torch_dtype: bfloat16 # None if quantization is being used
+      max_memory: {} # max_memories per device, default leave blank
+        # 0: 72GB
+        # 1: 72GB
+        # 2: 36GB
+        # 3: 36GB
+      quantize_kwargs: # 8bit
+      load_model: true
+
+  peft:
+    config: LoraConfig
+    config_args:
+      lora_alpha: 16 # Alpha parameter for LoRA scaling
+      lora_dropout: 0.1 # Dropout probability for LoRA layers
+      r: 64 # LoRA attention dimension
+      bias: none
+      task_type: "CAUSAL_LM"
+      # # target_modules optional
+      # # taken from https://colab.research.google.com/drive/1SYpgFpcmtIUzdE7pxqknrM4ArCASfkFQ?usp=sharing
+      # target_modules: 
+      #   # - q_proj
+      #   # - v_proj
+      #   - "q_proj" 
+      #   - "k_proj"
+      #   - "v_proj"
+      #   - "o_proj"
+      #   - "gate_proj"
+      #   - "up_proj"
+      #   - "down_proj"
+
+  train:
+    class: CLMTokenClassifierRMTrainer
+    args_class: RewardConfig
+
+    training:
+      num_train_epochs: 1
+      # max_steps: -1 # Number of training steps (overrides num_train_epochs)
+      per_device_train_batch_size: 8
+      gradient_accumulation_steps: 4
+      gradient_checkpointing: true
+      gradient_checkpointing_kwargs: # leave None as default
+        use_reentrant: true
+      optim: paged_adamw_32bit
+      save_steps: 50
+      logging_steps: 10
+      save_total_limit: 10
+      save_strategy: steps
+      # # evaluation parameters, uncomment to use
+      per_device_eval_batch_size: 8
+      eval_steps: 50
+      eval_strategy: steps
+      metric_for_best_model: eval_loss
+      load_best_model_at_end: true
+      greater_is_better: false
+      learning_rate: 1.0e-4
+      weight_decay: 0.001 # Weight decay to apply to all layers except bias/LayerNorm weights
+      # fp16: true
+      bf16: true
+      max_grad_norm: 0.3 # Maximum gradient normal (gradient clipping)
+      warmup_ratio: 0.03 # Ratio of steps for a linear warmup (from 0 to learning rate)
+      # Group sequences into batches with same length
+      # Saves memory and speeds up training considerably
+      group_by_length: true
+      lr_scheduler_type: cosine
+      # report_to: tensorboard
+      report_to: none
+      # ddp_find_unused_parameters: false
+
+      # trainer specific config args
+      max_length: 2048 # default none is same as 1024
+
+    callbacks:
+      - name: NeptuneCallback
+        args: # No args for Neptune Callback
+      - name: EarlyStoppingCallback
+        args:
+          early_stopping_patience: 7
+    
+    trainer:
+      step_tag: " ки" # ensure uncommon but single token upon tokenization # for non-mistral because of tokenization differnce
+      # step_tag: "ки" # ensure uncommon but single token upon tokenization # for mistral because of tokenization differnce
+      step_targets: 
+        - "-" # incorrect, ensure values are single token upon tokenization, order matters as index 0 will be assigned to this token
+        - "+" # correct, ensure values are single token upon tokenization, order matters as index 1 will be assigned to this token
+
+  output_dir: output/<dataset-name>/rm

@@ -1,0 +1,87 @@
+neptune:
+  workspace: <your-workspace>
+  project-name: SPARE-PRM-Inference
+  run-name: spare-prm-inference
+  tags:
+    - reasoning
+    - LLMs
+    - inference
+
+exp:
+  seed: 42
+
+  data:
+    load:
+      path: <path-to-HF-or-local-data> # e.g. "data/math" or "UKPLab/sparp"
+      # name:
+      #   - <name-of-sub-data> # if there are several subcomponents of the data e.g. "small-SpaRP-PS1 (SpaRTUN)" for sparp
+    filter:
+    #   fields:
+    #     - context_id
+    #     - question_id
+    #   model_output: "output/infer-llama-3-8B-1I-SFT-20-generation-0-shot" # filter and keep only those whose field ids are in model output
+      field: "comment"
+      sub_field: "is_math_500" # filter and keep only those with True sub_field criteria i.e. here those which are MATH-500 sub-data
+    shuffle: true
+    # select: # select to infer on a subset of the dataset, else comment this out
+    #   start_idx: 0
+    #   end_idx: 5 # end index is excluding like usual python
+
+  batch_size: 4
+  infer_split: test
+  exemplars:
+    split: validation
+    k: 0 # 0 for no few-shot evaluation because inferring from finetuned model
+
+  messages:
+    # context_id: context_id
+    context_id: id
+    # question_id: question_id
+    instruct_field: instruction
+    
+    system_as_separate: false # true # CHANGE as per model e.g. true for llama but false for mistral
+    system_user_sep: "\n\n"
+    
+    creation_args:
+      context_field: # blank or null for GSM8K and MATH, combined_paragraphs for MuSiQue-Ans, or context for SpaRP
+      question_field: question
+      response_field: targets # Used with few-shot examples, if given.
+      # response_choices: target_choices # if choices are known e.g. SpaRP
+      # response_aliases: answer_aliases # if aliases are given e.g. MuSiQue-Ans
+      response_trigger: "Hence, the answer is " # Used with few-shot examples, if given.
+      reasoning_field: reasoning # Used with few-shot examples, if given.
+      reasoning_trigger: "Let's think step by step.\n" # Used with few-shot examples, if given.
+      # ctx_ques_sep: " " # separation between context and question if both are present.
+
+  model:
+    model_class: HFGenerativeLM
+    init_args:
+      model: "meta-llama/Meta-Llama-3-8B-Instruct"
+      modelclass: "AutoModelForCausalLM"
+      peft_model: 
+        - <path-to-QLoRA-finetuned-SFT-1I-peft-model> # 1st iteration finetuned model
+        - <path-to-QLoRA-finetuned-ORPO-2I-peft-model> # if present, 2nd iteration finetuned Outcome or SPARE ORPO model on top of previous iteration
+      tokenizer_kwargs:
+        padding_side: left
+      pad_token: unk_token
+      device_map: ddp # None if quantization is being used
+      torch_dtype: bfloat16 # None if quantization is being used
+      max_memory: {} # max_memories per device, default leave blank
+        # 0: 72GB
+        # 1: 72GB
+        # 2: 36GB
+        # 3: 36GB
+      quantize_kwargs: # 8bit
+      load_model: true # False for debugging with only tokenizer
+    generate_args:
+      total_generation: 20 # total generations, generated in ceil(total_generation/num_return_sequences) batches
+      generation_config:
+        max_new_tokens: 500
+        do_sample: true # false for greedy decoding
+        num_return_sequences: 20 # generation at once in one batch
+        temperature: 1
+        top_p: 1
+      chat_template_config:
+        add_generation_prompt: true
+
+  output_dir: output/<dataset-name>

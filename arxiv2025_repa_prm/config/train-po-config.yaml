@@ -1,0 +1,227 @@
+neptune:
+  workspace: <your-workspace>
+  project-name: SPARE-PRM-Training
+  run-name: spare-prm-training
+  tags:
+    - reasoning
+    - LLMs
+    - training
+    - preference-optimization
+
+exp:
+  seed: 42
+
+  data:
+    load:
+      # name:
+      #   - <name-of-sub-data> # if there are several subcomponents of the data e.g. "small-SpaRP-PS1 (SpaRTUN)" for sparp
+      
+      source: # path of the source data to relevant meta data
+        path: <path-to-HF-or-local-data> # e.g. "data/math" or "UKPLab/sparp"
+      
+      preference:
+        train_output_path: <path-to-step-graded-multiple-model-output-generations-on-train-set>
+        validation_output_path: <path-to-step-graded-multiple-model-output-generations-on-val-set>
+        merge_by_id_kwargs: # params to merge individually graded generations to form preferences between them
+          id_keys: 
+            - "context_id"
+            # - "question_id"
+          ids_to_merge: # LLM graded / scored generations and its associated data e.g. EM
+            - "grade_ans"
+            - "grading"
+            - "em"
+          ids_to_drop: # not needed anymore
+            # - "f1"
+            - "output_idx"
+            - "extracted"
+            - "predicted"
+            - "instruction"
+            # - "context" # for sparp or combined_paragraphs for MuSiQue-Ans or comment for gsm8k and math
+            - "question"
+          drop_duplicate: true
+        score_creator: "decompose_and_aggregate_grading_scores"
+        score_creator_kwargs:
+          grade_ans_field: "grade_ans"
+          graded_field: "grading"
+          outcome_field: "em"
+          step_pattern: "\\n*\\[\\d+\\]\\s*" # as used while LLM grading
+          step_joiner: " ки\n" # replace back to this as step_tag or marker
+          # step_joiner: "\n"
+          step_targets:
+            INCORRECT: -1 
+            CORRECT: 1
+          missed_grading_as_outcome: false # true # grading can be complete or incomplete depending on LLM instruction following capability. Chosing false here just marks the steps that wee missed in grading as incorrect while chosing true here marks the step missed while grading to be same as outcome em.
+        merge_source_data_kwargs:
+          merge_keys:
+            - "instruction"
+            # - "context" # for sparp or combined_paragraphs for MuSiQue-Ans or comment for gsm8k and math
+            - "question"
+            - "reasoning"
+            # - "answer" for MuSiQue-Ans, targets for others
+            - "targets"
+          id_keys:
+            id: "context_id"
+            # context_id: "context_id" # for dataset where multiple ids are there
+            # question_id: "question_id" # for dataset where multiple ids are there
+        ex_to_content_kwargs:
+          context_field: # blank or null for GSM8K and MATH, combined_paragraphs for MuSiQue-Ans, or context for SpaRP
+          question_field: question
+          response_field: targets
+          # response_field: answer for MuSiQue-Ans, targets for others
+          response_trigger: "Hence, the answer is "
+          reasoning_field: reasoning
+          reasoning_trigger: "Let's think step by step.\n"
+          # reasoning_trigger: "To determine the answer, let's decompose the question and answer them step-by-step.\n" # for MuSiQue-Ans
+          ctx_ques_sep: " " # separation between context and question if both are present.
+          # ctx_ques_sep: "\n\nQUESTION: " # for MuSiQue-Ans
+        preference_scorer: "reasoning_scorer"
+        preference_scorer_kwargs:
+          use_scores:
+            - "answer"
+            - "sequence_mean" # use this for SPARE-ORPO, otherwise comment this out for Outcome-ORPO
+          mean: false # mark false for lexicographic comparison in the order specified in use_scores
+          fill_none_with: null
+        preference_sampler: "comparison_preference_sampler"
+        sampler_common_kwargs:
+          unique_pairs: true
+        train_preference_sampler_kwargs:
+          pair_count: 10 # preference pairs per instance
+          # compare_fn: "greater_than" # choose this for outcome-orpo
+          compare_fn: "pareto_comparator" # chose this for spare-orpo
+          compare_fn_kwargs: 
+            strict: true
+        validation_preference_sampler_kwargs:
+          pair_count: 1 
+          # compare_fn: "greater_than"
+          compare_fn: "pareto_comparator"
+          compare_fn_kwargs: 
+            strict: true
+        ground_truth_as_preference: true # insert ground-truth as a winning instance to ensure preference generation possibility even for instances when no model generation was correct. This strategy is taken from Iterative Reasoning Preference Optimization (NeurIPS 2024) paper from Meta - https://proceedings.neurips.cc/paper_files/paper/2024/hash/d37c9ad425fe5b65304d500c6edcba00-Abstract-Conference.html
+        ground_truth_vs_chosen: false # true to create preferences between GT and model generated correct outcome solutions, else only w.r.t. model generated incorrect solutions
+        train_pair_count_post_ground_truth: 10
+        validation_pair_count_post_ground_truth: 2 
+        output_to_hf_dataset_kwargs:
+          prompt_col: "question"
+          chosen_col: "chosen"
+          rejected_col: "rejected"
+          instruction_col: "instruction"  # empty or mark None if not present
+          context_col: # blank or null for GSM8K and MATH, combined_paragraphs for MuSiQue-Ans, or context for SpaRP
+          context_id_col: "context_id"
+          question_id_col: null # blank or null for GSM8K and MATH, question_id for MuSiQue-Ans and SpaRP
+          chosen_score_col: "chosen_score"
+          rejected_score_col: "rejected_score"
+
+    shuffle: true
+    select:
+      train:
+        start_idx: 0
+        end_idx: 19500 # ~ 3x source training data # end index is excluding like usual python
+      validation:
+        start_idx: 0
+        end_idx: 760
+    
+    chat_template_args:
+      prepare_splits:
+        - train
+        - validation
+      prompt_col: question
+      rename_prompt_col: prompt  # None if final col same as prompt_col
+      instruction_col: instruction  # mark None if not present
+      context_col: # blank or null for GSM8K and MATH, combined_paragraphs for MuSiQue-Ans, or context for SpaRP
+      ctx_ques_sep: " "
+      # ctx_ques_sep: "\n\nQUESTION: " # for MuSiQue-Ans
+      # None if responses need not be processed while custom chat preparation 
+      # e.g. for llama-2 response processing not required but is required for llama-3
+      response_cols: 
+        - chosen
+        - rejected
+      prompt_postprocessor: llama-3 # or default for no postprocessing
+
+  # training configs and details adapted from community resources mentioned on the
+  # HF's llama2 model_doc at:
+  # https://huggingface.co/docs/transformers/main/model_doc/llama2
+  # e.g. notebooks linked under text generation and optimization for QLoRA training
+  # And trl sft example scripts at:
+  # https://github.com/huggingface/trl/blob/main/examples/scripts/sft.py
+  
+  model:
+    model_class: HFGenerativeLM
+    init_args:
+      model: "meta-llama/Meta-Llama-3-8B-Instruct"
+      modelclass: "AutoModelForCausalLM"
+      peft_model: 
+        - <path-to-QLoRA-finetuned-SFT-1I-peft-model> # 1st iteration finetuned model
+      tokenizer_kwargs:
+        # right padding to fix unexpected overflow issues with fp16 training as noted in the sft_trainer:
+        # https://github.com/huggingface/trl/blob/main/trl/trainer/sft_trainer.py#L285
+        padding_side: right
+      pad_token: unk_token
+      device_map: infer # ddp # auto
+      torch_dtype: bfloat16 # auto
+      max_memory: # max_memories per device, default leave blank
+      quantize_kwargs: 8bit
+      load_model: true
+
+  peft:
+    config: LoraConfig
+    config_args:
+      lora_alpha: 16 # Alpha parameter for LoRA scaling
+      lora_dropout: 0.1 # Dropout probability for LoRA layers
+      r: 64 # LoRA attention dimension
+      bias: none
+      task_type: "CAUSAL_LM"
+      # # target_modules optional
+      # # taken from https://colab.research.google.com/drive/1SYpgFpcmtIUzdE7pxqknrM4ArCASfkFQ?usp=sharing
+      # target_modules: 
+      #   - q_proj
+      #   - v_proj
+
+  train:
+    class: ORPOTrainer
+    args_class: ORPOConfig
+
+    training:
+      beta: 0.2 # specific to ORPO trade-off between SFT and OR default value is 0.1
+      max_length: 2048
+      max_prompt_length: 1400 # ensure roughly 500 completion length
+      num_train_epochs: 1
+      # max_steps: -1 # Number of training steps (overrides num_train_epochs)
+      per_device_train_batch_size: 4
+      gradient_accumulation_steps: 8
+      gradient_checkpointing: true
+      gradient_checkpointing_kwargs: # leave None as default
+        use_reentrant: true
+      optim: paged_adamw_32bit
+      save_steps: 50
+      logging_steps: 10
+      save_total_limit: 10
+      save_strategy: steps
+      # # evaluation parameters, uncomment to use
+      per_device_eval_batch_size: 4
+      eval_steps: 50
+      eval_strategy: steps
+      metric_for_best_model: eval_loss
+      load_best_model_at_end: true
+      greater_is_better: false
+      learning_rate: 1.0e-4
+      weight_decay: 0.001 # Weight decay to apply to all layers except bias/LayerNorm weights
+      # fp16: true
+      bf16: true
+      max_grad_norm: 0.3 # Maximum gradient normal (gradient clipping)
+      warmup_ratio: 0.03 # Ratio of steps for a linear warmup (from 0 to learning rate)
+      # Group sequences into batches with same length
+      # Saves memory and speeds up training considerably
+      group_by_length: false # not supported by preference optimizer yet
+      lr_scheduler_type: cosine
+      # report_to: tensorboard
+      report_to: none
+      # ddp_find_unused_parameters: false
+
+    callbacks:
+      - name: NeptuneCallback
+        args: # No args for Neptune Callback
+      - name: EarlyStoppingCallback
+        args:
+          early_stopping_patience: 7
+    
+  output_dir: output/<dataset-name>

@@ -1,0 +1,133 @@
+neptune:
+  workspace: <your-workspace>
+  project-name: SPARE-PRM-Training
+  run-name: spare-prm-training
+  tags:
+    - reasoning
+    - LLMs
+    - training
+    - supervised-fine-tuning
+
+exp:
+  seed: 42
+
+  data:
+    load:
+      path: <path-to-HF-or-local-data> # e.g. "data/math" or "UKPLab/sparp"
+      # name:
+      #   - <name-of-sub-data> # if there are several subcomponents of the data e.g. "small-SpaRP-PS1 (SpaRTUN)" for sparp
+    
+    shuffle: true
+    # select: # select to train on a subset of the dataset, else comment this out
+    #   start_idx: 0
+    #   end_idx: 5 # end index is excluding like usual python
+    
+    chat_template_args:
+      prepare_splits: 
+        - train
+        - validation
+      instruct_field: instruction
+      context_field: # blank or null for GSM8K and MATH, combined_paragraphs for MuSiQue-Ans, or context for SpaRP
+      question_field: question
+      response_field: targets
+      # response_field: answer # for MuSiQue-Ans
+      response_trigger: "Hence, the answer is "
+      reasoning_field: reasoning
+      reasoning_trigger: "Let's think step by step.\n"
+      # reasoning_trigger: "To determine the answer, let's decompose the question and answer them step-by-step.\n" # for MuSiQue-Ans
+      # # ctx_ques_sep: " " # for SpaRP
+      # ctx_ques_sep: "\n\nQUESTION: " # for MuSiQue-Ans
+      
+      system_as_separate: false # true # CHANGE as per model e.g. true for llama but false for mistral
+      system_user_sep: "\n\n"
+
+  # training configs and details adapted from community resources mentioned on the
+  # HF's llama2 model_doc at:
+  # https://huggingface.co/docs/transformers/main/model_doc/llama2
+  # e.g. notebooks linked under text generation and optimization for QLoRA training
+  # And trl sft example scripts at:
+  # https://github.com/huggingface/trl/blob/main/examples/scripts/sft.py
+  
+  model:
+    model_class: HFGenerativeLM
+    init_args:
+      model: "meta-llama/Meta-Llama-3-8B-Instruct"
+      modelclass: "AutoModelForCausalLM"
+      peft_model: # default None, else path to trained peft model for iterative training 
+      tokenizer_kwargs:
+        # right padding to fix unexpected overflow issues with fp16 training as noted in the sft_trainer:
+        # https://github.com/huggingface/trl/blob/main/trl/trainer/sft_trainer.py#L285
+        padding_side: right
+      pad_token: unk_token
+      device_map: ddp # auto
+      torch_dtype: bfloat16 # auto
+      max_memory: {} # max_memories per device, default leave blank
+      quantize_kwargs: 8bit
+      load_model: true
+
+  peft:
+    config: LoraConfig
+    config_args:
+      lora_alpha: 16 # Alpha parameter for LoRA scaling
+      lora_dropout: 0.1 # Dropout probability for LoRA layers
+      r: 64 # LoRA attention dimension
+      bias: none
+      task_type: "CAUSAL_LM"
+      # # target_modules optional
+      # # taken from https://colab.research.google.com/drive/1SYpgFpcmtIUzdE7pxqknrM4ArCASfkFQ?usp=sharing
+      # target_modules: 
+      #   - q_proj
+      #   - v_proj
+
+  train:
+    training:
+      num_train_epochs: 1
+      # max_steps: -1 # Number of training steps (overrides num_train_epochs)
+      per_device_train_batch_size: 4 
+      gradient_accumulation_steps: 8 
+      gradient_checkpointing: true
+      gradient_checkpointing_kwargs: # leave None as default
+        use_reentrant: true
+      optim: paged_adamw_32bit
+      save_steps: 20
+      logging_steps: 10
+      save_total_limit: 10
+      save_strategy: steps
+      # # evaluation parameters, uncomment to use
+      per_device_eval_batch_size: 4 
+      eval_steps: 20
+      eval_strategy: steps
+      metric_for_best_model: eval_loss
+      load_best_model_at_end: true
+      greater_is_better: false
+      learning_rate: 1.0e-4
+      weight_decay: 0.001 # Weight decay to apply to all layers except bias/LayerNorm weights
+      # fp16: true
+      bf16: true
+      max_grad_norm: 0.3 # Maximum gradient normal (gradient clipping)
+      warmup_ratio: 0.03 # Ratio of steps for a linear warmup (from 0 to learning rate)
+      # Group sequences into batches with same length
+      # Saves memory and speeds up training considerably
+      group_by_length: true
+      lr_scheduler_type: cosine
+      # report_to: tensorboard
+      report_to: none
+      # ddp_find_unused_parameters: false
+
+    callbacks:
+      - name: NeptuneCallback
+        args: # No args for Neptune Callback
+      - name: EarlyStoppingCallback
+        args:
+          early_stopping_patience: 7
+    
+    trainer:
+      dataset_text_field: chat_text # or else use instead formatting_func
+      # max_seq_length: # default none is same as 1024
+      max_seq_length: 2048 
+      packing: false
+      neftune_noise_alpha: 5
+      dataset_kwargs:
+        add_special_tokens: false # already added while applying chat template
+
+  output_dir: output/<dataset-name>

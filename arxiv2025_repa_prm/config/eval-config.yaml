@@ -1,0 +1,48 @@
+neptune:
+  workspace: <your-workspace>
+  project-name: SPARE-PRM-Evaluation
+  run-name: spare-prm-evaluation
+  tags:
+    - reasoning
+    - LLMs
+    - evaluation
+
+exp:
+  seed: 42 
+
+  data:
+    load:
+      path: <path-to-HF-or-local-data> # e.g. "data/math" or "UKPLab/sparp"
+      # name:
+      #   - <name-of-sub-data> # if there are several subcomponents of the data e.g. "small-SpaRP-PS1 (SpaRTUN)" for sparp
+
+  extraction: 
+    # ans_trigger: 
+    #   - "answer is" # for several variants like Hence, So or Therefore
+    
+    ans_trigger: "(?<=\\\\boxed\\{).*(?=\\})" # trigger e.g. ans in \\box{} for math dataset
+    # ans_trigger: "(?<=answer\\sis:\\s).*(?=\\sки)"
+    # ans_trigger: "\\d+"
+    
+    trigger_as_regex: true # false
+    # self_consistency_sample_count: 20 # leave blank or comment out for all
+    consolidate_strategy: set_majority_voting # set null if no consolidation
+    take_trigger_pos: 0 # -1 # specify which pos to pick if regex leads to multiple extractions
+    extractor_fn: null # for math
+    # extractor_fn: # extract_numeric # for gsm8k
+    # extractor_fn: # extract_sparp_relations # for sparp
+    # extractor_fn: # extract_clean_text # for MuSiQue-Ans
+    extractor_kwargs: {} # empty for defaults
+    ignore_case: false
+
+  data_filter:
+    - {} # empty for no filtering i.e. consider all
+
+  calc_metrics:
+    metric_strategies: # leave blank for all
+      - "exact_match"
+      - "macro avg"
+      - "label-wise"
+      # - "normal_conf_mat"
+
+  input_dir: output/<dataset-name>/infer-llama-3-8B-1I-SFT-20-generation-0-shot

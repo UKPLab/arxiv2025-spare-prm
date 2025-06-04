@@ -1,0 +1,130 @@
+neptune:
+  workspace: <your-workspace>
+  project-name: SPARE-PRM-Inference
+  run-name: spare-prm-inference
+  tags:
+    - reasoning
+    - LLMs
+    - inference
+    - reward-models
+    - reward-scoring
+
+exp:
+  seed: 42
+
+  data:
+    load:
+      path: <path-to-HF-or-local-data> # e.g. "data/math" or "UKPLab/sparp", used to obtain meta data from the source data
+      # name:
+      #   - <name-of-sub-data> # if there are several subcomponents of the data e.g. "small-SpaRP-PS1 (SpaRTUN)" for sparp
+    merge_output:
+      model_output: "output/<dataset-name>/infer-llama-3-8B-1I-SFT-20-generation-0-shot" # generation to score using RM
+      extract_args:
+        # ans_trigger: 
+        #   - "answer is"
+        ans_trigger: "(?<=\\\\boxed\\{).*(?=\\})" # trigger e.g. ans in \\box{} for math dataset
+        trigger_as_regex: true # false
+        consolidate_strategy: null
+        take_trigger_pos: 0 # specify which pos to pick if regex leads to multiple extractions
+        extractor_fn: null # for math
+        # extractor_fn: # extract_numeric # for gsm8k
+        # extractor_fn: # extract_sparp_relations # for sparp
+        # extractor_fn: # extract_clean_text # for MuSiQue-Ans
+        extractor_kwargs: {} # empty for defaults
+        ignore_case: false
+      merge_keys: # merge these keys from source data which is not available in model generated output
+        - instruction 
+        # - context
+        # - combined_paragraphs
+        - question
+        # - target_choices
+        - comment
+      id_keys: 
+        id: "context_id"
+        # - "context_id"
+        # - "question_id"
+      compute_metrics_kwargs:
+        targets: "targets"
+        # target_choices: "target_choices"
+        # target_aliases: "target_aliases"
+        # metric_fn: "compute_em_set"
+        metric_fn: "compute_math_em"
+    filter:
+      # fields:
+      #   - context_id
+      #   - question_id
+      # model_output: "output/<dataset-name>/infer-llama-3-8B-1I-SFT-20-generation-0-shot" # filter and keep only those whose field ids are in model output
+      field: "comment"
+      sub_field: "is_math_500" # filter and keep only those with True sub_field criteria i.e. here those which are MATH-500 sub-data
+    shuffle: true
+    # select: # shuffle_select for choosing based on indices after shuffling, field_stratified_select for shuffled select but trying for same number of selection per field value
+    #   select_fn: "shuffle_select"
+    #   select_kwargs:
+    #     start_idx: 0
+    #     end_idx: 5 # end index is excluding like usual python
+      # select_fn: "field_stratified_select"
+      # select_kwargs:
+      #   field: "em"
+      #   stratified_values:
+      #     - 0
+      #     - 1
+      #   select: 20000 # for each stratified value
+
+    # step_tag_args: # for inserting step_tags if not part of the model generation already
+    #   response_field: "response"
+    #   step_tag: " ки\n" # ensure uncommon but single token upon tokenization
+    #   step_pattern: "\\n+" # for musique dataset from grading
+    #   # step_pattern: "$" # "$" for only at the end of text e.g. outcome step
+    #   # preprocessor: "regex_substitute"
+    #   # preprocessor_kwargs: 
+    #   #   repl: "\\n"
+    #   #   pattern: "\\n*\\[\\d+\\]\\s*"
+    #   #   insert_at_end: false
+    #   step_tag_inserter: "regex_substitute" # callable or keys supported in STEP_TAG_INSERTER
+    
+    chat_template_args:
+      prepare_splits: 
+        - test
+      keep_fields: true
+      instruct_field: instruction # include only if instruction was also the part of RM training
+      context_field: null # null for gsm8k and math, combined_paragraphs for MuSiQue-Ans, context for sparp
+      question_field: question
+      # response_field: targets
+      response_field: "" # empty if already part of generated response
+      response_trigger: "" # empty if already part of generated response
+      reasoning_field: response # if step_tag was already part of the model generated response
+      # reasoning_field: "step_tagged_response" # if step tagging was done post generation for RM scoring
+      reasoning_trigger: "" # empty if already part of generated response
+      # ctx_ques_sep: " " # separation between context and question if both are present.
+
+  batch_size: 4
+  infer_split: test
+
+  model:
+    model_class: HFGenerativeLM
+    init_args:
+      model: "meta-llama/Meta-Llama-3-8B-Instruct"
+      modelclass: "AutoModelForCausalLM" # Since RM was trained as causal LM task with predictions only at step_tags
+      peft_model: <path-to-QLoRA-finetuned-RM-peft-model> # default None, else path to trained peft model
+      tokenizer_kwargs:
+        padding_side: right
+      pad_token: unk_token
+      device_map: ddp # None if quantization is being used
+      torch_dtype: bfloat16 # None if quantization is being used
+      max_memory: {} # max_memories per device, default leave blank
+        # 0: 72GB
+        # 1: 72GB
+        # 2: 36GB
+        # 3: 36GB
+      quantize_kwargs: # 8bit
+      load_model: true # False for debugging with only tokenizer
+
+  infer_args:
+    step_tag: " ки" # ensure uncommon but single token upon tokenization # for non-mistral because of tokenization differnce
+    # step_tag: "ки" # ensure uncommon but single token upon tokenization # for mistral because of tokenization differnce
+    step_targets: 
+        - "-" # incorrect, ensure values are single token upon tokenization, order matters as index 0 will be assigned to this token
+        - "+" # correct, ensure values are single token upon tokenization, order matters as index 1 will be assigned to this token
+    step_proba_tag: "+" # correct, ensure values are single token upon tokenization
+
+  output_dir: output/<dataset-name>/rm
