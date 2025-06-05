@@ -1,3 +1,12 @@
+output/
+*private*
+*train*.json
+*val*.json
+*test*.json
+*.zip
+*.backup
+.neptune/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
