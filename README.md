@@ -13,6 +13,8 @@
 
 This repository includes the training, inference and evaluation code used in our Arxiv 2025 paper - [SPARE: Single-Pass Annotation with Reference-Guided Evaluation for Automatic Process Supervision and Reward Modelling](). 
 
+We introduced a principled framework for a single-pass alignment and step-annotation for automatic process supervision. Process Reward Models (SPARE-PRMs) trained based on the proposed annotation scheme outperform baselines such as Self-Consistency and ORM-weighted aggregation on four datasets across mathematical, question-answering and spatial reasoning datasets. The annotation scheme is also competitive while being computationally efficient compared to tree-search based annotation methods.
+
 <!-- This is the official template for new Python projects at UKP Lab. It was adapted for the needs of UKP Lab from the excellent [python-project-template](https://github.com/rochacbruno/python-project-template/) by [rochacbruno](https://github.com/rochacbruno).
 
 It should help you start your project and give you continuous status updates on the development through [GitHub Actions](https://docs.github.com/en/actions). -->
