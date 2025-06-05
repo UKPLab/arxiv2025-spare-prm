@@ -10,6 +10,7 @@ output/
 docs/
 tests/
 static/
+ABOUT_THIS_TEMPLATE.md
 index.html
 .nojekyll
 
