@@ -36,12 +36,12 @@ The parameters of the experiments are specified in their respecive `config` file
 ```bash
 config/
 ├── eval-config.yaml
-├── infer-config.yaml
-├── infer-rm-config.yaml
+├── infer-config.yaml         # infer config for solution generation
+├── infer-rm-config.yaml      # infer config for solution scoring using Reward Model (RM)
 ├── private-config.yaml
-├── train-po-config.yaml
-├── train-sft-config.yaml
-└── train-tc-rm-config.yaml
+├── train-po-config.yaml      # train config for preference-optimization (PO)
+├── train-sft-config.yaml     # train config for simple supervised fine-tuning (SFT)
+└── train-tc-rm-config.yaml   # train config for Token Classification (TC) based Reward Model (RM)
 ```
 
 The private api keys such as for using OpenAI models or logging through Neptune API can be provided in the `private-config.yaml` file.
