@@ -10,6 +10,8 @@ output/
 docs/
 tests/
 static/
+index.html
+.nojekyll
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
