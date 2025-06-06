@@ -1,13 +1,13 @@
-<!-- <p  align="center">
-  <img src='logo.png' width='200'>
-</p> -->
-
 # SPARE: Single-Pass Annotation with Reference-Guided Evaluation for Automatic Process Supervision and Reward Modelling
 [![Arxiv](https://img.shields.io/badge/Arxiv-YYMM.NNNNN-red?style=flat-square&logo=arxiv&logoColor=white)](https://put-here-your-paper.com)
 [![Hugging Face Model](https://img.shields.io/badge/HuggingFace-Model-yellow)](https://huggingface.co/UKPLab/Llama-3-8b-spare-prm-math)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Python Versions](https://img.shields.io/badge/Python-3.10-blue.svg?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 <!-- [![CI](https://github.com/UKPLab/arxiv2025-repa-prm/actions/workflows/main.yml/badge.svg)](https://github.com/UKPLab/arxiv2025-repa-prm/actions/workflows/main.yml) -->
+
+<p  align="center">
+  <img src='static/images/spare-overview.png' width='200'>
+</p>
 
 ## Description:
 

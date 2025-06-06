@@ -9,7 +9,7 @@ output/
 
 docs/
 tests/
-static/
+# static/
 ABOUT_THIS_TEMPLATE.md
 index.html
 .nojekyll
