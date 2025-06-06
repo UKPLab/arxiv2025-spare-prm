@@ -6,7 +6,8 @@
 <!-- [![CI](https://github.com/UKPLab/arxiv2025-repa-prm/actions/workflows/main.yml/badge.svg)](https://github.com/UKPLab/arxiv2025-repa-prm/actions/workflows/main.yml) -->
 
 <p  align="center">
-  <img src='static/images/spare-overview.png' width='200'>
+  <!-- <img src='static/images/spare-overview.png' width='200'> -->
+  <img src='static/images/spare-overview.png'>
 </p>
 
 ## Description:
