@@ -86,7 +86,7 @@ for generation in (correct_generation, incorrect_generation):
     message = [
         dict(role="system", content=instruction),
         dict(role="user", content=question),
-        dict(role="user", content=generation),
+        dict(role="assistant", content=generation),
     ]
 
     input_ids = tokenizer.apply_chat_template(message, tokenize=True, return_tensors="pt").to(device)
