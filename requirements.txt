@@ -1,6 +1,6 @@
 tqdm==4.66.3
 numpy==1.23.4
-torch==2.0.0
+torch==2.1.0
 datasets==2.21.0
 sentencepiece==0.1.99
 transformers==4.46.0
