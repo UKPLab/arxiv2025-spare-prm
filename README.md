@@ -97,8 +97,8 @@ for generation in (correct_generation, incorrect_generation):
         step_scores = scores[input_ids == step_tag_id]
         print(step_scores)
         
-# tensor([0.9561, 0.9496, 0.9527]) - correct_generation
-# tensor([0.6638, 0.6755]) - incorrect_generation
+# tensor([0.9617, 0.9487, 0.8938]) - correct_generation
+# tensor([0.5794, 0.4910]) - incorrect_generation
 ```
 
 Contact person: [Md Imbesat Hassan Rizvi](mailto:imbesat.rizvi@tu-darmstadt.de) 
