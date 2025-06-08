@@ -11,7 +11,7 @@ docs/
 tests/
 # static/
 ABOUT_THIS_TEMPLATE.md
-index.html
+# index.html
 .nojekyll
 
 # Byte-compiled / optimized / DLL files
