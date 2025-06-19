@@ -1,5 +1,5 @@
 # SPARE: Single-Pass Annotation with Reference-Guided Evaluation for Automatic Process Supervision and Reward Modelling
-[![Arxiv](https://img.shields.io/badge/Arxiv-YYMM.NNNNN-red?style=flat-square&logo=arxiv&logoColor=white)](https://put-here-your-paper.com)
+[![Arxiv](https://img.shields.io/badge/Arxiv-YYMM.NNNNN-red?style=flat-square&logo=arxiv&logoColor=white)](https://arxiv.org/abs/2506.15498)
 [![Hugging Face Model](https://img.shields.io/badge/HuggingFace-Model-yellow)](https://huggingface.co/UKPLab/Llama-3-8b-spare-prm-math)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Python Versions](https://img.shields.io/badge/Python-3.10-blue.svg?style=flat&logo=python&logoColor=white)](https://www.python.org/)
@@ -12,7 +12,7 @@
 
 ## Description:
 
-This repository includes the training, inference and evaluation code used in our Arxiv 2025 paper - [SPARE: Single-Pass Annotation with Reference-Guided Evaluation for Automatic Process Supervision and Reward Modelling](). 
+This repository includes the training, inference and evaluation code used in our paper - [SPARE: Single-Pass Annotation with Reference-Guided Evaluation for Automatic Process Supervision and Reward Modelling](https://arxiv.org/abs/2506.15498). 
 
 We introduced a principled framework for a single-pass alignment and step-annotation for automatic process supervision. Process Reward Models (SPARE-PRMs) trained based on the proposed annotation scheme outperform baselines such as Self-Consistency and ORM-weighted aggregation on four datasets across mathematical, question-answering and spatial reasoning datasets. The annotation scheme is also competitive while being computationally efficient compared to tree-search based annotation methods.
 
@@ -128,14 +128,14 @@ If you want to set up this template:
 If you use this repository, our trained SPARE-PRM model or our work, please cite:
 
 ```
-@misc{rizvi2024spare,
+@misc{rizvi2025sparesinglepassannotationreferenceguided,
       title={SPARE: Single-Pass Annotation with Reference-Guided Evaluation for Automatic Process Supervision and Reward Modelling}, 
       author={Md Imbesat Hassan Rizvi and Xiaodan Zhu and Iryna Gurevych},
       year={2025},
-      eprint={},
+      eprint={2506.15498},
       archivePrefix={arXiv},
       primaryClass={cs.CL},
-      url={https://arxiv.org/abs/}, 
+      url={https://arxiv.org/abs/2506.15498}, 
 }
 ```
 
