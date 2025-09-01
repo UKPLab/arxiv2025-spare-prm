@@ -58,7 +58,7 @@ python train_rm.py # to use the default location of the train-tc-rm-config
 python train_rm.py --config my-train-tc-rm-config.yaml
 ```
 
-A trained SPARE-PRM model based on Llama-3-8b is provided for direct-use at [![Hugging Face Model](https://img.shields.io/badge/HuggingFace-Model-yellow)](https://huggingface.co/UKPLab/Llama-3-8b-spare-prm-math). A sample code to use it is given below:
+A trained SPARE-PRM model based on Qwen2.5-3b and Llama-3-8b are provided for direct-use at [![Hugging Face Model](https://img.shields.io/badge/HuggingFace-Qwen2.5--3b--spare--prm--math-yellow)](https://huggingface.co/UKPLab/Qwen2.5-3b-spare-prm-math) and [![Hugging Face Model](https://img.shields.io/badge/HuggingFace-Llama--3--8b--spare--prm--math-yellow)](https://huggingface.co/UKPLab/Llama-3-8b-spare-prm-math) respectively. A sample code to use it is given below:
 
 ```python
 from transformers import AutoTokenizer
@@ -69,13 +69,15 @@ incorrect_token = "-"
 correct_token = "+"
 step_tag = " ки" # space in the beginning required for correct Llama tokenization
 
-tokenizer = AutoTokenizer.from_pretrained("UKPLab/Llama-3-8b-spare-prm-math")
+# tokenizer = AutoTokenizer.from_pretrained("UKPLab/Llama-3-8b-spare-prm-math")
+tokenizer = AutoTokenizer.from_pretrained("UKPLab/Qwen2.5-3b-spare-prm-math")
 
 step_target_ids = tokenizer.convert_tokens_to_ids([incorrect_token, correct_token])
 step_tag_id = tokenizer.encode(step_tag)[-1] 
 
 device = "cuda:0"
-model = AutoModelForCausalLM.from_pretrained("UKPLab/Llama-3-8b-spare-prm-math").to(device).eval()
+# model = AutoModelForCausalLM.from_pretrained("UKPLab/Llama-3-8b-spare-prm-math").to(device).eval()
+model = AutoModelForCausalLM.from_pretrained("UKPLab/Qwen2.5-3b-spare-prm-math").to(device).eval()
 
 # include this instruction as it was left as it is during the PRM training.
 instruction = "You are an expert at solving challenging math problems spanning across various categories and difficulties such as Algebra, Number Theory, Geometry, Counting and Probability, Precalculus etc. For a given math problem, your task is to generate a step-by-step reasoning-based solution providing an answer to the question. Identify the correct concepts, formulas and heuristics that needs to be applied and then derive the contents of the reasoning steps from the given contexts and accurate calculations from the previous reasoning steps."
@@ -98,8 +100,10 @@ for generation in (correct_generation, incorrect_generation):
         step_scores = scores[input_ids == step_tag_id]
         print(step_scores)
         
-# tensor([0.9617, 0.9487, 0.8938]) - correct_generation
-# tensor([0.5794, 0.4910]) - incorrect_generation
+# tensor([0.9617, 0.9487, 0.8938]) - correct_generation (Llama-3-8b-spare-prm-math)
+# tensor([0.5794, 0.4910]) - incorrect_generation (Llama-3-8b-spare-prm-math)
+# tensor([0.8710, 0.9163, 0.9786]) - correct_generation (Qwen2.5-3b-spare-prm-math)
+# tensor([0.3292, 0.5288]) - incorrect_generation (Qwen2.5-3b-spare-prm-math)
 ```
 
 Contact person: [Md Imbesat Hassan Rizvi](mailto:imbesat.rizvi@tu-darmstadt.de) 
