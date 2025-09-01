@@ -1,6 +1,7 @@
 # SPARE: Single-Pass Annotation with Reference-Guided Evaluation for Automatic Process Supervision and Reward Modelling
 [![Arxiv](https://img.shields.io/badge/Arxiv-2506.15498-red?style=flat-square&logo=arxiv&logoColor=white)](https://arxiv.org/abs/2506.15498)
-[![Hugging Face Model](https://img.shields.io/badge/HuggingFace-Llama--3--8b--SPARE--PRM--MATH-yellow)](https://huggingface.co/UKPLab/Llama-3-8b-spare-prm-math)
+[![Hugging Face Model](https://img.shields.io/badge/HuggingFace-Qwen2.5--3b--spare--prm--math-yellow)](https://huggingface.co/UKPLab/Llama-3-8b-spare-prm-math)
+[![Hugging Face Model](https://img.shields.io/badge/HuggingFace-Llama--3--8b--spare--prm--math-yellow)](https://huggingface.co/UKPLab/Llama-3-8b-spare-prm-math)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Python Versions](https://img.shields.io/badge/Python-3.10-blue.svg?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 <!-- [![CI](https://github.com/UKPLab/arxiv2025-repa-prm/actions/workflows/main.yml/badge.svg)](https://github.com/UKPLab/arxiv2025-repa-prm/actions/workflows/main.yml) -->
